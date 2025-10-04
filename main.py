@@ -21,7 +21,7 @@ app = FastAPI(title="SamakiCash API", version="1.0.0")
 # CORS middleware for frontend connection
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000"],
+    allow_origins=["https://samakicash-pwa.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
