@@ -1,3 +1,4 @@
+"use client"
 import type React from "react"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
@@ -6,6 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Target, Heart, Users, Award } from "lucide-react"
 import Link from "next/link"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
+export function generateViewport() {
+  return {
+    themeColor: "#38bdf8",
+    inlineSize: "device-width",
+    initialScale: 1,
+  };
+}
 
 function AnimatedSection({
   children,

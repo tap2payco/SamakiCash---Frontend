@@ -1,3 +1,4 @@
+"use client"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,13 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
+export function generateViewport() {
+  return {
+    themeColor: "#38bdf8",
+    inlineSize: "device-width",
+    initialScale: 1,
+  };
+}
 
 function AnimatedFeatureCard({ feature, index }: { feature: any; index: number }) {
   const { ref, isVisible } = useScrollAnimation(0.1)
