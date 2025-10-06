@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from elevenlabs.client import ElevenLabs
 import base64
+from enum import Enum
+from pydantic import Field
 
 # Load environment variables
 load_dotenv()
@@ -111,11 +113,20 @@ async def init_db():
 async def startup_event():
     await init_db()
 
-# Pydantic models
+# Pydantic models & User types
+class UserType(str, Enum):
+    FISHER = "fisher"
+    SELLER = "seller"   # seller = dagaa vendor / landing site seller
+    BUYER = "buyer"     # buyer = wholesaler / hotel / processor / trader
+
 class UserCreate(BaseModel):
     email: str
     password: str
-    user_type: str = "fisher"
+    user_type: UserType = Field(default=UserType.FISHER)
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    organization: Optional[str] = None  # useful for buyers
+    location: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: str
@@ -384,18 +395,24 @@ async def store_catch_record(request: FishCatchRequest, price_analysis: Dict, ma
 @app.post("/api/auth/register")
 async def register(user: UserCreate):
     try:
-        user_id = str(uuid.uuid4())
+        # Basic duplicate check (in-memory)
         conn = await get_db()
-        
+        existing = await conn.fetch("SELECT * FROM users WHERE email = $1", user.email)
+        if existing:
+            return {"status": "error", "message": "User with that email already exists"}
+
+        user_id = str(uuid.uuid4())
+
         await conn.execute(
             "INSERT INTO users (id, email, password_hash, user_type, created_at) VALUES ($1, $2, $3, $4, $5)",
-            user_id, user.email, user.password, user.user_type, datetime.now()
+            user_id, user.email, user.password, user.user_type.value, datetime.now()
         )
-        
-        return {"user_id": user_id, "message": "User created successfully"}
-        
+
+        # Optionally store extended profile in separate table / fields - for demo we keep simple
+        return {"status": "success", "user_id": user_id, "user_type": user.user_type.value}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        print("Registration error:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/auth/login")
 async def login(credentials: LoginRequest):
@@ -641,6 +658,20 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now()}
+
+@app.get("/api/users/buyers")
+async def list_buyers():
+    conn = await get_db()
+    users = await conn.fetch("SELECT * FROM users")
+    buyers = [u for u in users if u.get("user_type") == UserType.BUYER.value]
+    return {"count": len(buyers), "buyers": buyers}
+
+@app.get("/api/users/sellers")
+async def list_sellers():
+    conn = await get_db()
+    users = await conn.fetch("SELECT * FROM users")
+    sellers = [u for u in users if u.get("user_type") in (UserType.SELLER.value, UserType.FISHER.value)]
+    return {"count": len(sellers), "sellers": sellers}
 
 # Debug endpoints
 @app.get("/api/debug/elevenlabs")
