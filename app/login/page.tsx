@@ -1,18 +1,26 @@
+// app/login/page.tsx
 "use client"
-
-import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Fish, Loader2 } from "lucide-react"
-import Link from "next/link"
 import { apiService } from "@/lib/api"
 import { AuthManager } from "@/lib/auth"
+
+export const viewport = {
+  width:"device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#3b82f6", // themeColor moved here to fix warning
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")

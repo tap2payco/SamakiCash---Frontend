@@ -1,16 +1,10 @@
 import { convertToModelMessages, streamText, type UIMessage, tool } from "ai"
 import { z } from "zod"
 
+// Maximum duration for AI responses
 export const maxDuration = 30
 
-const mistral = (model: string) => ({
-  provider: "mistral",
-  modelId: model,
-  settings: {
-    apiKey: "4DIT4Ghrc4L1eFcLhwDljSyAzU34a5lo",
-    baseURL: "https://api.mistral.ai/v1",
-  },
-})
+// --- Tools --- //
 
 const getSamakiCashHelpTool = tool({
   description: "Get help information about SamakiCash features and services",
@@ -18,71 +12,76 @@ const getSamakiCashHelpTool = tool({
     topic: z.string().describe("The topic the user needs help with"),
   }),
   execute: async ({ topic }) => {
-    // Simulate knowledge base lookup
     const helpTopics: Record<string, string> = {
       "upload fish photos":
         'To upload fish photos: 1) Go to Dashboard, 2) Click "Add Catch", 3) Take or select photo, 4) Our AI will analyze and provide price recommendations.',
       "credit score":
-        "Your credit score is calculated based on: fishing activity consistency, loan repayment history, catch reporting accuracy, and platform engagement. Check your score in the Credit section.",
+        "Your credit score is calculated based on fishing activity, loan repayment, catch reporting, and engagement. Check it in the Credit section.",
       insurance:
-        "We offer boat insurance, equipment insurance, catch insurance, and personal accident insurance. Get quotes in the Insurance section based on your fishing activities.",
+        "We offer boat, equipment, catch, and personal accident insurance. Get quotes in the Insurance section.",
       "offline mode":
-        "SamakiCash works offline! You can log catches, view previous data, and access basic features without internet. Data syncs when you reconnect.",
+        "SamakiCash works offline! You can log catches and view data without internet. Sync occurs when you reconnect.",
       pricing:
-        "Our AI analyzes your fish photos to identify species, size, and quality, then provides market-based pricing recommendations using current local market data.",
+        "Our AI analyzes your fish photos to identify species, size, and quality, then gives market-based pricing recommendations.",
       loans:
-        "Access microloans based on your credit score and fishing history. Apply in the Credit section with competitive rates for fishers.",
+        "Access microloans based on credit score and fishing history. Apply in the Credit section.",
     }
 
     const lowerTopic = topic.toLowerCase()
     for (const [key, value] of Object.entries(helpTopics)) {
-      if (lowerTopic.includes(key)) {
-        return value
-      }
+      if (lowerTopic.includes(key)) return value
     }
 
-    return "I can help you with uploading fish photos, checking credit scores, getting insurance quotes, using offline mode, understanding pricing, and applying for loans. What specific topic would you like to know more about?"
+    return "I can help you with uploading photos, checking credit scores, insurance, offline mode, pricing, and loans. Which topic would you like to know more about?"
   },
 })
 
 const connectToHumanTool = tool({
-  description: "Connect the user to human support when they need personalized assistance",
+  description: "Connect the user to human support for personalized assistance",
   inputSchema: z.object({
     reason: z.string().describe("Why the user needs human support"),
   }),
   execute: async ({ reason }) => {
-    return `I'm connecting you to our human support team for: ${reason}. Please wait while I transfer you to an available agent. You can also call +255 123 456 789 or email support@samakicash.com for immediate assistance.`
+    return `Connecting you to human support for: ${reason}. Call +255 123 456 789 or email support@samakicash.com for immediate assistance.`
   },
 })
+
+// --- API Route --- //
 
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json()
 
-  const systemMessage = {
-    role: "system" as const,
-    content: `You are SamakiCash AI Assistant, a helpful chatbot for Tanzanian fishers using the SamakiCash platform. 
+  // System message to set context and personality
+  const systemMessage: UIMessage = {
+    id: "system",
+    role: "system",
+    parts: [
+      {
+        type: "text",
+        text: `You are SamakiCash AI Assistant, a helpful chatbot for Tanzanian fishers using the SamakiCash platform.
 
-Key information about SamakiCash:
-- AI-powered platform for fishers in Tanzania
-- Features: AI market insights, credit scoring, insurance, financial services
-- Progressive Web App (PWA) that works offline
-- Helps fishers get fair prices for their catch through photo analysis
-- Provides microloans and insurance specifically for fishers
+Key information:
+- AI-powered for Tanzanian fishers
+- Features: AI market insights, credit scoring, insurance
+- PWA that works offline
+- Helps fishers get fair prices via photo analysis
+- Provides microloans and insurance
 
-Your personality:
-- Friendly, helpful, and knowledgeable about fishing and technology
-- Use simple, clear language
-- Be encouraging and supportive
-- Understand the challenges fishers face
-- Occasionally use Swahili greetings like "Habari" or "Karibu"
-
-Always try to help users with their questions about the platform. If you can't answer something or they need personalized help, use the connectToHuman tool.`,
+Personality:
+- Friendly, helpful, simple language
+- Encouraging, occasionally use Swahili greetings
+- Direct users to human support if needed using connectToHuman tool`,
+      },
+    ],
   }
 
   const prompt = convertToModelMessages([systemMessage, ...messages])
 
+  // Stream AI response using AI SDK v5 + Mistral v2
   const result = streamText({
-    model: mistral("mistral-large-latest"),
+    model: "mistral-large-v2", // ✅ v2-compatible model
+    provider: "mistral",
+    apiKey: process.env.MISTRAL_API_KEY,
     messages: prompt,
     tools: {
       getSamakiCashHelp: getSamakiCashHelpTool,
