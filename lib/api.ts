@@ -68,10 +68,15 @@ class APIService {
   }
 
   // Auth endpoints
-  async register(email: string, password: string, userType = "fisher"): Promise<AuthResponse> {
+  async register(email: string, password: string, userType: string, additionalData?: { name?: string; phone?: string; organization?: string; location?: string }): Promise<AuthResponse> {
     return this.fetchAPI("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, user_type: userType }),
+      body: JSON.stringify({ 
+        email, 
+        password, 
+        user_type: userType,
+        ...additionalData 
+      }),
     })
   }
 
