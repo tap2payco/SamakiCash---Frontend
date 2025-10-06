@@ -36,6 +36,12 @@ export default function DashboardPage() {
   const [imagePreview, setImagePreview] = useState<string>("")
   const router = useRouter()
 
+  // Render helpers to avoid passing objects directly to React nodes
+  const renderText = (value: unknown): string => {
+    if (value == null) return ""
+    return typeof value === "string" ? value : JSON.stringify(value)
+  }
+
   useEffect(() => {
     if (!AuthManager.isAuthenticated()) {
       router.push("/login")
@@ -243,7 +249,7 @@ export default function DashboardPage() {
                 <div className="text-3xl font-bold text-primary mb-2">
                   {result.price_analysis.fair_price} {result.price_analysis.currency}/kg
                 </div>
-                <p className="text-sm text-muted-foreground">{result.price_analysis.reasoning}</p>
+                <p className="text-sm text-muted-foreground">{renderText(result.price_analysis.reasoning)}</p>
               </div>
 
               {/* Voice Message */}
@@ -266,7 +272,7 @@ export default function DashboardPage() {
               {result.recommendation && (
                 <div className="bg-card rounded-lg p-4 border">
                   <h3 className="font-semibold mb-2">Market Recommendation</h3>
-                  <p className="text-sm">{result.recommendation}</p>
+                  <p className="text-sm">{renderText(result.recommendation)}</p>
                 </div>
               )}
 
@@ -274,16 +280,13 @@ export default function DashboardPage() {
               {result.market_insights && (
                 <div className="bg-card rounded-lg p-4 border">
                   <h3 className="font-semibold mb-2">Market Insights</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Demand Level</p>
-                      <p className="font-medium">High</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Season</p>
-                      <p className="font-medium">Peak</p>
-                    </div>
-                  </div>
+                  {typeof result.market_insights === "object" ? (
+                    <pre className="text-xs bg-muted/40 rounded-md p-3 overflow-x-auto">
+{`${JSON.stringify(result.market_insights, null, 2)}`}
+                    </pre>
+                  ) : (
+                    <p className="text-sm">{renderText(result.market_insights)}</p>
+                  )}
                 </div>
               )}
             </CardContent>
