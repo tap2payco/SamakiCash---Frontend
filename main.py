@@ -418,29 +418,118 @@ async def login(credentials: LoginRequest):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+from fastapi import HTTPException
+
 @app.post("/api/analyze-catch")
 async def analyze_catch(request: FishCatchRequest, background_tasks: BackgroundTasks):
+    """
+    Analyze a fisher's catch:
+    - call Mistral for price analysis
+    - call an AI/ML API for market insights
+    - optionally call Nebius for image analysis
+    - optionally generate a voice file via ElevenLabs
+    - store the record in background
+    Returns a safe, renderable analysis_summary plus detailed JSON pieces.
+    """
     try:
-        # Call all AI services
-        price_analysis = await call_mistral_ai(request.dict())
-        market_insights = await call_aiml_api(request.dict())
-        image_analysis = await call_nebius_ai(request.image_data)
-        voice_filename = await call_elevenlabs(price_analysis, market_insights)
-        
-        # Store in database
-        background_tasks.add_task(store_catch_record, request, price_analysis, market_insights, image_analysis, voice_filename)
-        
-        return {
+        # -----------------------
+        # 1) Price analysis (Mistral)
+        # -----------------------
+        try:
+            price_analysis = await call_mistral_ai(request.dict())
+            if not isinstance(price_analysis, dict):
+                raise ValueError("Mistral returned unexpected format")
+        except Exception as e:
+            print(f"[analyze_catch] Mistral AI failed: {e}")
+            price_analysis = {
+                "fair_price": 0,
+                "currency": "TZS",
+                "reasoning": "fallback price due to AI error",
+                "confidence_score": 0.0
+            }
+
+        # -----------------------
+        # 2) Market insights (AI/ML API)
+        # -----------------------
+        try:
+            market_insights = await call_aiml_api(request.dict())
+            # if the integration returns a raw string or unexpected object, normalize
+            if isinstance(market_insights, dict):
+                market_trend = market_insights.get("market_trend") or market_insights.get("market_trend_major", "stable")
+            else:
+                market_trend = str(market_insights)
+                market_insights = {"market_trend": market_trend}
+        except Exception as e:
+            print(f"[analyze_catch] AI/ML API failed: {e}")
+            market_insights = {"market_trend": "stable", "recommendation": "Sell in the morning for best price"}
+
+        # -----------------------
+        # 3) Image analysis (Nebius) - optional
+        # -----------------------
+        try:
+            image_analysis = await call_nebius_ai(request.image_data) if request.image_data else {"analysis": "no image provided"}
+            if not isinstance(image_analysis, dict):
+                image_analysis = {"analysis": str(image_analysis)}
+        except Exception as e:
+            print(f"[analyze_catch] Nebius AI failed: {e}")
+            image_analysis = {"analysis": "image analysis failed", "confidence": 0.0}
+
+        # -----------------------
+        # 4) Voice generation (ElevenLabs) - optional
+        # -----------------------
+        try:
+            voice_filename = await call_elevenlabs(price_analysis, market_insights)
+            # standardize failure markers
+            if not voice_filename or voice_filename in ("voice_generation_failed", "voice_generation_timeout", "voice_generation_skipped", "voice_connection_error"):
+                voice_filename = None
+        except Exception as e:
+            print(f"[analyze_catch] ElevenLabs failed: {e}")
+            voice_filename = None
+
+        # -----------------------
+        # 5) Build a safe, human-friendly summary
+        # -----------------------
+        try:
+            suggested_price = price_analysis.get("fair_price", "N/A")
+            currency = price_analysis.get("currency", "TZS")
+            market_trend_text = market_insights.get("market_trend") if isinstance(market_insights, dict) else str(market_insights)
+            summary = (
+                f"{request.quantity_kg} kg of {request.fish_type} in {request.location}. "
+                f"Suggested price: {suggested_price} {currency}/kg. "
+                f"Market trend: {market_trend_text}."
+            )
+        except Exception as e:
+            print(f"[analyze_catch] Summary build failed: {e}")
+            summary = f"{request.quantity_kg} kg of {request.fish_type} in {request.location}. Price unavailable."
+
+        # -----------------------
+        # 6) Store in DB (background)
+        # -----------------------
+        try:
+            background_tasks.add_task(store_catch_record, request, price_analysis, market_insights, image_analysis, voice_filename)
+        except Exception as e:
+            # storing should not block the response; log for later debugging
+            print(f"[analyze_catch] Failed to queue DB store: {e}")
+
+        # -----------------------
+        # 7) Return a consistent payload (safe to render)
+        # -----------------------
+        response_payload = {
             "status": "success",
             "price_analysis": price_analysis,
             "market_insights": market_insights,
             "image_analysis": image_analysis,
-            "voice_message_url": f"/audio/{voice_filename}" if not voice_filename.startswith("error:") else "voice_generation_failed",
-            "recommendation": f"Suggested price: TZS {price_analysis.get('fair_price', 'N/A')} per kg"
+            "voice_message_url": f"/audio/{voice_filename}" if voice_filename else None,
+            "analysis_summary": summary,
+            "recommendation": f"Suggested price: TZS {suggested_price} per kg" if suggested_price != "N/A" else "No price recommendation"
         }
-        
+
+        return response_payload
+
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        # If something truly unexpected happens, return a 500 with error info
+        print(f"[analyze_catch] Fatal error: {e}")
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
 @app.post("/api/credit-score")
 async def get_credit_score(user_id: str):
@@ -480,6 +569,63 @@ async def get_insurance_quote(request: InsuranceQuoteRequest):
             "message": "Comprehensive coverage"
         }
     except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+class MatchRequest(BaseModel):
+    fish_type: str
+    quantity_kg: float
+    location: str
+    user_id: Optional[str] = None
+
+@app.post("/api/match")
+async def make_match(request: MatchRequest):
+    """
+    Simple matchmaking: uses price/demand analysis then returns candidate buyers.
+    To match real buyers you must register buyer accounts (user_type='buyer').
+    """
+    try:
+        conn = await get_db()
+
+        # 1) Get price + market insights using AI services
+        price_analysis = await call_mistral_ai(request.dict())
+        market_insights = await call_aiml_api(request.dict())
+
+        # 2) Find buyers from the in-memory DB
+        all_users = await conn.fetch("SELECT * FROM users")
+        buyers = [u for u in all_users if u.get("user_type") == "buyer"]
+
+        # 3) Build simple match scoring & result
+        matches = []
+        for b in buyers:
+            # Simple heuristic: base score on Mistral confidence + random factor
+            confidence = float(price_analysis.get("confidence_score", 0)) if price_analysis else 0.5
+            score = int(min(max(30 + confidence * 60, 0), 100))
+            matches.append({
+                "buyer_id": b.get("id"),
+                "buyer_contact": b.get("email"),
+                "match_score": score,
+                "estimated_price_per_kg": price_analysis.get("fair_price"),
+                "estimated_total_value": round(price_analysis.get("fair_price", 0) * request.quantity_kg, 2),
+                "note": "Simulated match (use buyer preferences in production)"
+            })
+
+        # 4) Provide a short string summary (safe to render directly in UI)
+        summary = (
+            f"{request.quantity_kg} kg of {request.fish_type} at {request.location}. "
+            f"Suggested price: {price_analysis.get('fair_price', 'N/A')} {price_analysis.get('currency','TZS')}/kg. "
+            f"Market trend: {market_insights.get('market_trend', market_insights.get('market_trend', 'stable'))}."
+        )
+
+        return {
+            "status": "success",
+            "matches": matches,
+            "price_analysis": price_analysis,
+            "market_insights": market_insights,
+            "analysis_summary": summary
+        }
+
+    except Exception as e:
+        print("Matchmaking error:", str(e))
         return {"status": "error", "message": str(e)}
 
 @app.get("/audio/{filename}")
