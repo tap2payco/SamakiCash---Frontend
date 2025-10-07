@@ -23,6 +23,7 @@ export const viewport = {
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -34,7 +35,10 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const response = await apiService.login(email, password)
+      const response = await apiService.login(
+        email ? { email } : { phone },
+        password,
+      )
 
       // Store auth data
       AuthManager.setAuth(response.access_token || "temp-token", {
@@ -64,15 +68,25 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email (optional)</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone (optional)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+255 700 000 000"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Provide email or phone (at least one)</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

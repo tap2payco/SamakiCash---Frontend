@@ -42,6 +42,43 @@ export default function DashboardPage() {
     return typeof value === "string" ? value : JSON.stringify(value)
   }
 
+  // Normalize market_insights from various backend formats
+  const normalizeMarketInsights = (raw: unknown): any | null => {
+    try {
+      if (!raw) return null
+
+      // If backend returned OpenAI-style envelope
+      if (
+        typeof raw === "object" && raw !== null &&
+        (raw as any).choices && Array.isArray((raw as any).choices)
+      ) {
+        const content = (raw as any).choices?.[0]?.message?.content
+        if (typeof content === "string") {
+          try {
+            return JSON.parse(content)
+          } catch {
+            return { text: content }
+          }
+        }
+      }
+
+      // If backend returned a JSON string
+      if (typeof raw === "string") {
+        try {
+          return JSON.parse(raw)
+        } catch {
+          return { text: raw }
+        }
+      }
+
+      // If backend returned plain object already
+      if (typeof raw === "object") return raw as any
+      return { text: String(raw) }
+    } catch {
+      return null
+    }
+  }
+
   useEffect(() => {
     if (!AuthManager.isAuthenticated()) {
       router.push("/login")
@@ -280,13 +317,53 @@ export default function DashboardPage() {
               {result.market_insights && (
                 <div className="bg-card rounded-lg p-4 border">
                   <h3 className="font-semibold mb-2">Market Insights</h3>
-                  {typeof result.market_insights === "object" ? (
-                    <pre className="text-xs bg-muted/40 rounded-md p-3 overflow-x-auto">
-{`${JSON.stringify(result.market_insights, null, 2)}`}
-                    </pre>
-                  ) : (
-                    <p className="text-sm">{renderText(result.market_insights)}</p>
-                  )}
+                  {(() => {
+                    const insights = normalizeMarketInsights(result.market_insights)
+                    if (!insights) return <p className="text-sm text-muted-foreground">No insights available</p>
+
+                    // Structured rendering when common keys are present
+                    const trend = insights.market_trend
+                    const competitor = insights.competitor_analysis
+                    const recommendation = insights.recommendation
+
+                    if (trend || competitor || recommendation) {
+                      return (
+                        <div className="space-y-3 text-sm">
+                          {trend && (
+                            <div>
+                              <p className="font-medium">Market Trend</p>
+                              <p className="text-muted-foreground">
+                                {renderText(trend.demand_trends || trend.summary || trend)}
+                              </p>
+                            </div>
+                          )}
+                          {competitor && (
+                            <div>
+                              <p className="font-medium">Competitor Analysis</p>
+                              <p className="text-muted-foreground">
+                                {renderText(competitor.competitor_prices || competitor.summary || competitor)}
+                              </p>
+                            </div>
+                          )}
+                          {recommendation && (
+                            <div>
+                              <p className="font-medium">Recommendation</p>
+                              <p className="text-muted-foreground">
+                                {renderText(recommendation.strategies || recommendation.summary || recommendation)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    }
+
+                    // Fallback: pretty-print whatever was returned
+                    return (
+                      <pre className="text-xs bg-muted/40 rounded-md p-3 overflow-x-auto">
+{`${JSON.stringify(insights, null, 2)}`}
+                      </pre>
+                    )
+                  })()}
                 </div>
               )}
             </CardContent>

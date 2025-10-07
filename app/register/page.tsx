@@ -53,7 +53,7 @@ export default function RegisterPage() {
         location: location || undefined,
       }
 
-      const response = await apiService.register(email, password, userType, additionalData)
+      const response = await apiService.register(email || null, password, userType, additionalData)
 
       // Store auth data
       AuthManager.setAuth(response.access_token || "temp-token", {
@@ -123,19 +123,18 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email (optional)</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone (Optional)</Label>
+              <Label htmlFor="phone">Phone (optional)</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -143,6 +142,7 @@ export default function RegisterPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">Provide email or phone (at least one)</p>
             </div>
 
             {userType === "buyer" && (

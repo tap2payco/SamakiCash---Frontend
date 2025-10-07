@@ -1,4 +1,5 @@
 import { convertToModelMessages, streamText, type UIMessage, tool } from "ai"
+import { mistral } from "@ai-sdk/mistral"
 import { z } from "zod"
 
 // Maximum duration for AI responses
@@ -77,11 +78,14 @@ Personality:
 
   const prompt = convertToModelMessages([systemMessage, ...messages])
 
-  // Stream AI response using AI SDK v5 + Mistral v2
+  // Ensure server-side API key is present
+  if (!process.env.MISTRAL_API_KEY) {
+    throw new Error("MISTRAL_API_KEY is not set on the server environment")
+  }
+
+  // Stream AI response using the provider directly (bypasses Vercel AI Gateway)
   const result = streamText({
-    model: "mistral-large-v2", // ✅ v2-compatible model
-    provider: "mistral",
-    apiKey: process.env.MISTRAL_API_KEY,
+    model: mistral("mistral-large-latest", { apiKey: process.env.MISTRAL_API_KEY }),
     messages: prompt,
     tools: {
       getSamakiCashHelp: getSamakiCashHelpTool,

@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   description: "AI-powered platform for Tanzanian fishers with market insights and financial services",
   generator: "SamakiCash",
   manifest: "/manifest.json",
+  // Explicit favicon to avoid 404 on /favicon.ico when using SVG
+  icons: {
+    icon: "/favicon.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -25,6 +29,10 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: "#2ab8a3",
+  // Add modern mobile-web-app-capable meta for Android (apple one is deprecated)
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 }
 
 export default function RootLayout({

@@ -12,6 +12,7 @@ export interface AuthResponse {
   user_id: string
   user_type: string
   message: string
+  access_token?: string
 }
 
 export interface AnalysisResponse {
@@ -99,6 +100,27 @@ export interface LoanApplicationResponse {
   message: string
 }
 
+export interface UserStatsResponse {
+  total_catches: number
+  total_quantity_kg: number
+  average_price_per_kg: number
+}
+
+export interface UserCatchesResponse {
+  count: number
+  catches: any[]
+}
+
+export interface UserTransactionsResponse {
+  count: number
+  transactions: any[]
+}
+
+export interface UserMarketInsightsResponse {
+  top_fish_types: [string, number][]
+  insight: string
+}
+
 class APIService {
   private baseURL: string
 
@@ -124,11 +146,17 @@ class APIService {
   }
 
   // Auth endpoints
-  async register(email: string, password: string, userType: string, additionalData?: { name?: string; phone?: string; organization?: string; location?: string }): Promise<AuthResponse> {
+  async register(
+    email: string | null,
+    password: string,
+    userType: string,
+    additionalData?: { name?: string; phone?: string; organization?: string; location?: string }
+  ): Promise<AuthResponse> {
     return this.fetchAPI("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ 
-        email, 
+        email: email || undefined,
+        phone: additionalData?.phone || undefined,
         password, 
         user_type: userType,
         ...additionalData 
@@ -136,10 +164,10 @@ class APIService {
     })
   }
 
-  async login(email: string, password: string): Promise<AuthResponse> {
+  async login(identifier: { email?: string; phone?: string }, password: string): Promise<AuthResponse> {
     return this.fetchAPI("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ ...identifier, password }),
     })
   }
 
@@ -210,6 +238,23 @@ class APIService {
   // Audio playback
   getAudioUrl(filename: string): string {
     return `${this.baseURL}/audio/${filename}`
+  }
+
+  // New user data endpoints
+  async getUserStats(userId: string): Promise<UserStatsResponse> {
+    return this.fetchAPI(`/api/users/${userId}/stats`, { method: "GET" })
+  }
+
+  async getUserCatches(userId: string): Promise<UserCatchesResponse> {
+    return this.fetchAPI(`/api/users/${userId}/catches`, { method: "GET" })
+  }
+
+  async getUserTransactions(userId: string): Promise<UserTransactionsResponse> {
+    return this.fetchAPI(`/api/users/${userId}/transactions`, { method: "GET" })
+  }
+
+  async getUserMarketInsights(userId: string): Promise<UserMarketInsightsResponse> {
+    return this.fetchAPI(`/api/users/${userId}/market-insights`, { method: "GET" })
   }
 }
 
