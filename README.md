@@ -69,8 +69,8 @@ SamakiCash is a Progressive Web App (PWA) designed to empower Tanzanian fishers 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/samakicash-pwa.git
-   cd samakicash-pwa
+   git clone [https://github.com/your-username/samakicash-pwa.git](https://github.com/tap2payco/SamakiCash---Frontend.git)
+   cd SamakiCash---Frontend
    ```
 
 2. **Install dependencies**
@@ -109,7 +109,7 @@ SamakiCash is a Progressive Web App (PWA) designed to empower Tanzanian fishers 
 ## 📁 Project Structure
 
 ```
-samakicash-pwa/
+SamakiCash---Frontend/
 ├── app/                          # Next.js App Router
 │   ├── api/                      # API routes
 │   │   └── chat/                 # AI chatbot endpoint
