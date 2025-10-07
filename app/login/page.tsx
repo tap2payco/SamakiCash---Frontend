@@ -14,12 +14,11 @@ import { apiService } from "@/lib/api"
 import { AuthManager } from "@/lib/auth"
 
 export const viewport = {
-  width:"device-width",
+  width: "device-width",
   initialScale: 1,
-  minimumScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#3b82f6", // themeColor moved here to fix warning
+  themeColor: "#2ab8a3",
 }
 
 export default function LoginPage() {
@@ -38,7 +37,7 @@ export default function LoginPage() {
       const response = await apiService.login(email, password)
 
       // Store auth data
-      AuthManager.setAuth("mock-token", {
+      AuthManager.setAuth(response.access_token || "temp-token", {
         id: response.user_id,
         email: email,
         userType: response.user_type,

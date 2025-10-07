@@ -4,12 +4,7 @@ export interface User {
   userType: string
 }
 
-export const SUPER_USER = {
-  email: "elespius1,0@gmail.com",
-  password: "Piuspe@9702",
-  id: "super-admin-001",
-  userType: "super_admin",
-}
+// Super user credentials removed - use proper authentication
 
 export class AuthManager {
   private static readonly TOKEN_KEY = "samakicash_token"
@@ -49,17 +44,9 @@ export class AuthManager {
   }
 
   static async authenticateUser(email: string, password: string): Promise<User | null> {
-    // Check super user credentials
-    if (email === SUPER_USER.email && password === SUPER_USER.password) {
-      const user: User = {
-        id: SUPER_USER.id,
-        email: SUPER_USER.email,
-        userType: SUPER_USER.userType,
-      }
-      return user
-    }
-
-    // Add other authentication logic here
+    // Authentication should be handled by the API service
+    // This method is kept for compatibility but should not be used directly
+    console.warn("authenticateUser should not be used directly. Use apiService.login instead.")
     return null
   }
 

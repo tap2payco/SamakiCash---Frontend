@@ -22,8 +22,18 @@ export interface AnalysisResponse {
     reasoning: string
     confidence_score: number
   }
-  market_insights: any
-  voice_message_url: string
+  market_insights: {
+    market_trend: string
+    competitor_analysis: string
+    recommendation: string
+  }
+  image_analysis?: {
+    quality_assessment: string
+    freshness: string
+    confidence: number
+  }
+  voice_message_url: string | null
+  analysis_summary: string
   recommendation: string
 }
 
@@ -33,14 +43,60 @@ export interface CreditScoreResponse {
   loan_eligible: boolean
   max_loan_amount: number
   catch_count: number
+  score_components?: {
+    base_score: number
+    activity_bonus: number
+    total_catches: number
+  }
 }
 
 export interface InsuranceQuoteResponse {
   user_id: string
+  coverage_type: string
   coverage_amount: number
-  premium_amount: number
-  coverage_details: string
-  quote_valid_until: string
+  annual_premium: number
+  message: string
+}
+
+export interface MatchRequest {
+  fish_type: string
+  quantity_kg: number
+  location: string
+  user_id?: string
+}
+
+export interface MatchResponse {
+  status: string
+  matches: Array<{
+    buyer_id: string
+    buyer_contact: string
+    buyer_name?: string
+    buyer_organization?: string
+    buyer_location?: string
+    match_score: number
+    estimated_price_per_kg: number
+    estimated_total_value: number
+    reason?: string
+    note?: string
+  }>
+  price_analysis: any
+  market_insights: any
+  analysis_summary: string
+}
+
+export interface LoanApplicationRequest {
+  user_id: string
+  amount: number
+  purpose: string
+}
+
+export interface LoanApplicationResponse {
+  status: string
+  user_id: string
+  amount: number
+  purpose: string
+  credit_score: number
+  message: string
 }
 
 class APIService {
@@ -104,13 +160,50 @@ class APIService {
   }
 
   // Insurance quote
-  async getInsuranceQuote(userId: string, coverageAmount = 1000000): Promise<InsuranceQuoteResponse> {
+  async getInsuranceQuote(userId: string, coverageType = "equipment", coverageAmount = 1000000): Promise<InsuranceQuoteResponse> {
     return this.fetchAPI("/api/insurance-quote", {
       method: "POST",
       body: JSON.stringify({
         user_id: userId,
+        coverage_type: coverageType,
         coverage_amount: coverageAmount,
       }),
+    })
+  }
+
+  // Matchmaking
+  async findMatches(data: MatchRequest): Promise<MatchResponse> {
+    return this.fetchAPI("/api/match", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Loan application
+  async applyForLoan(data: LoanApplicationRequest): Promise<LoanApplicationResponse> {
+    return this.fetchAPI("/api/loan-application", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  // User management
+  async getBuyers(): Promise<{ count: number; buyers: any[] }> {
+    return this.fetchAPI("/api/users/buyers", {
+      method: "GET",
+    })
+  }
+
+  async getSellers(): Promise<{ count: number; sellers: any[] }> {
+    return this.fetchAPI("/api/users/sellers", {
+      method: "GET",
+    })
+  }
+
+  // Health check
+  async healthCheck(): Promise<{ message: string; status: string; version?: string; database?: string }> {
+    return this.fetchAPI("/", {
+      method: "GET",
     })
   }
 

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: samakicash-pwa
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_BASE_URL
+        fromService:
+          type: web
+          name: samakicash-backend
+          property: host
+      - key: NEXT_PUBLIC_MISTRAL_AI_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_ELEVENLABS_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_NEBIUS_AI_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_AIML_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_GA_MEASUREMENT_ID
+        sync: false

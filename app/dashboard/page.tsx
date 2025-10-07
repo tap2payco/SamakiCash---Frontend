@@ -109,14 +109,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Quick Stats */}
+        {/* Quick Stats - Will be populated with real data from API */}
         <div className="grid grid-cols-2 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center space-x-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">12</p>
+                  <p className="text-2xl font-bold">-</p>
                   <p className="text-xs text-muted-foreground">Catches Analyzed</p>
                 </div>
               </div>
@@ -127,7 +127,7 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <DollarSign className="w-5 h-5 text-secondary" />
                 <div>
-                  <p className="text-2xl font-bold">TSh 45K</p>
+                  <p className="text-2xl font-bold">-</p>
                   <p className="text-xs text-muted-foreground">Avg. Price/kg</p>
                 </div>
               </div>

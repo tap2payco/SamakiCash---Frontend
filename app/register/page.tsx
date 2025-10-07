@@ -56,7 +56,7 @@ export default function RegisterPage() {
       const response = await apiService.register(email, password, userType, additionalData)
 
       // Store auth data
-      AuthManager.setAuth("mock-token", {
+      AuthManager.setAuth(response.access_token || "temp-token", {
         id: response.user_id,
         email: email,
         userType: response.user_type,
