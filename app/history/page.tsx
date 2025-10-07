@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BottomNav } from "@/components/bottom-nav"
 import { CatchHistory } from "@/components/catch-history"
+import { apiService } from "@/lib/api"
 import { MarketTrends } from "@/components/market-trends"
 import { Fish, TrendingUp, CreditCard, Shield, ArrowLeft, Calendar, MapPin, DollarSign } from "lucide-react"
 import { AuthManager } from "@/lib/auth"
@@ -28,12 +29,30 @@ interface Transaction {
 export default function HistoryPage() {
   const [user, setUser] = useState(AuthManager.getUser())
   const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [transactions, setTransactions] = useState<any[]>([])
 
   useEffect(() => {
     if (!AuthManager.isAuthenticated()) {
       router.push("/login")
     }
   }, [router])
+
+  useEffect(() => {
+    const load = async () => {
+      if (!user?.id) return
+      setLoading(true)
+      try {
+        const data = await apiService.getUserTransactions(user.id)
+        setTransactions(data?.transactions || [])
+      } catch (e) {
+        setTransactions([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [user?.id])
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -99,13 +118,47 @@ export default function HistoryPage() {
                 <CardDescription>All your platform activities and financial transactions</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <DollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No transactions yet</h3>
-                  <p className="text-muted-foreground">
-                    Your transaction history will appear here once you start using the platform
-                  </p>
-                </div>
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading…</div>
+                ) : transactions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <DollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No transactions yet</h3>
+                    <p className="text-muted-foreground">
+                      Your transaction history will appear here once you start using the platform
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {transactions.map((transaction: any) => (
+                      <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                            {getTransactionIcon(transaction.type)}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold">{transaction.title}</h3>
+                            <p className="text-sm text-muted-foreground">{transaction.description}</p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Calendar className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(transaction.transaction_date || transaction.date).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {transaction.amount && (
+                            <p className="font-semibold">
+                              {(transaction.currency || "TZS")} {Number(transaction.amount).toLocaleString()}
+                            </p>
+                          )}
+                          <Badge className={getStatusColor(transaction.status)}>{transaction.status}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

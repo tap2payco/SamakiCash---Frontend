@@ -15,7 +15,7 @@ import { BottomNav } from "@/components/bottom-nav"
 import { PWAInstall } from "@/components/pwa-install"
 import { Fish, Camera, Loader2, Volume2, TrendingUp, DollarSign } from "lucide-react"
 import { AuthManager } from "@/lib/auth"
-import { apiService, type FishCatchRequest, type AnalysisResponse } from "@/lib/api"
+import { apiService, type FishCatchRequest, type AnalysisResponse, type UserStatsResponse } from "@/lib/api"
 
 const fishTypes = ["tilapia", "catfish", "sardine", "tuna", "mackerel", "snapper", "grouper", "kingfish"]
 
@@ -34,6 +34,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [imagePreview, setImagePreview] = useState<string>("")
+  const [stats, setStats] = useState<UserStatsResponse | null>(null)
+  const [statsLoading, setStatsLoading] = useState<boolean>(false)
   const router = useRouter()
 
   // Render helpers to avoid passing objects directly to React nodes
@@ -84,6 +86,22 @@ export default function DashboardPage() {
       router.push("/login")
     }
   }, [router])
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?.id) return
+      setStatsLoading(true)
+      try {
+        const data = await apiService.getUserStats(user.id)
+        setStats(data)
+      } catch (e) {
+        // ignore; UI will show dashes
+      } finally {
+        setStatsLoading(false)
+      }
+    }
+    fetchStats()
+  }, [user?.id])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -153,8 +171,8 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">-</p>
-                  <p className="text-xs text-muted-foreground">Catches Analyzed</p>
+                  <p className="text-2xl font-bold">{statsLoading ? "…" : stats?.total_catches ?? "-"}</p>
+                  <p className="text-xs text-muted-foreground">Total Catches</p>
                 </div>
               </div>
             </CardContent>
@@ -164,8 +182,14 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <DollarSign className="w-5 h-5 text-secondary" />
                 <div>
-                  <p className="text-2xl font-bold">-</p>
-                  <p className="text-xs text-muted-foreground">Avg. Price/kg</p>
+                  <p className="text-2xl font-bold">
+                    {statsLoading
+                      ? "…"
+                      : stats?.average_price_per_kg
+                      ? `TSh ${Math.round(stats.average_price_per_kg).toLocaleString()}`
+                      : "-"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Average Price/kg</p>
                 </div>
               </div>
             </CardContent>
