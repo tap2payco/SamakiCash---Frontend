@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.svg",
   },
+  // Add Android PWA meta to avoid deprecation warning
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

@@ -40,8 +40,16 @@ export default function DashboardPage() {
 
   // Render helpers to avoid passing objects directly to React nodes
   const renderText = (value: unknown): string => {
-    if (value == null) return ""
-    return typeof value === "string" ? value : JSON.stringify(value)
+    try {
+      if (value == null) return ""
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        return String(value)
+      }
+      // For objects/arrays, stringify to a compact human-readable string
+      return JSON.stringify(value)
+    } catch {
+      return ""
+    }
   }
 
   // Normalize market_insights from various backend formats
@@ -357,7 +365,7 @@ export default function DashboardPage() {
                             <div>
                               <p className="font-medium">Market Trend</p>
                               <p className="text-muted-foreground">
-                                {renderText(trend.demand_trends || trend.summary || trend)}
+                                {renderText(trend?.demand_trends ?? trend?.summary ?? trend)}
                               </p>
                             </div>
                           )}
@@ -365,7 +373,7 @@ export default function DashboardPage() {
                             <div>
                               <p className="font-medium">Competitor Analysis</p>
                               <p className="text-muted-foreground">
-                                {renderText(competitor.competitor_prices || competitor.summary || competitor)}
+                                {renderText(competitor?.competitor_prices ?? competitor?.summary ?? competitor)}
                               </p>
                             </div>
                           )}
@@ -373,7 +381,7 @@ export default function DashboardPage() {
                             <div>
                               <p className="font-medium">Recommendation</p>
                               <p className="text-muted-foreground">
-                                {renderText(recommendation.strategies || recommendation.summary || recommendation)}
+                                {renderText(recommendation?.strategies ?? recommendation?.summary ?? recommendation)}
                               </p>
                             </div>
                           )}
