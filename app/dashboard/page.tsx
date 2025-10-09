@@ -381,11 +381,28 @@ export default function DashboardPage() {
                       )
                     }
 
-                    // Fallback: pretty-print whatever was returned
+                    // Fallback: user-friendly rendering without showing raw code
                     return (
-                      <pre className="text-xs bg-muted/40 rounded-md p-3 overflow-x-auto">
-{`${JSON.stringify(insights, null, 2)}`}
-                      </pre>
+                      <div className="space-y-2 text-sm">
+                        {typeof insights === "string" ? (
+                          <p className="text-muted-foreground">{insights}</p>
+                        ) : Array.isArray(insights) ? (
+                          <ul className="list-disc pl-5">
+                            {insights.slice(0, 10).map((item, idx) => (
+                              <li key={idx} className="text-muted-foreground">{renderText(item)}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="space-y-1">
+                            {Object.entries(insights as Record<string, unknown>).slice(0, 8).map(([k, v]) => (
+                              <p key={k} className="text-muted-foreground">
+                                <span className="font-medium">{k.replace(/_/g, " ")}: </span>
+                                {renderText(v)}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )
                   })()}
                 </div>
