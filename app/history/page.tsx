@@ -72,7 +72,10 @@ export default function HistoryPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
+      case "sent":
         return "bg-green-100 text-green-800"
+      case "acknowledged":
+        return "bg-blue-100 text-blue-800"
       case "pending":
         return "bg-yellow-100 text-yellow-800"
       case "failed":
@@ -130,33 +133,56 @@ export default function HistoryPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {transactions.map((transaction: any) => (
-                      <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                            {getTransactionIcon(transaction.type)}
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{transaction.title}</h3>
-                            <p className="text-sm text-muted-foreground">{transaction.description}</p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Calendar className="w-3 h-3 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(transaction.transaction_date || transaction.date).toLocaleDateString()}
-                              </span>
+                    {transactions.map((transaction: any) => {
+                      const derivedType = transaction.type || (transaction.action ? "transaction" : undefined)
+                      const title =
+                        transaction.title ||
+                        (transaction.action === "request"
+                          ? "Payment Request"
+                          : transaction.action === "send"
+                          ? "Payment Sent"
+                          : "Transaction")
+                      const descFromTx = transaction.description ||
+                        [
+                          transaction.to_name ? `To ${transaction.to_name}` : undefined,
+                          transaction.to_phone ? `(${transaction.to_phone})` : undefined,
+                          transaction.note ? `- ${transaction.note}` : undefined,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")
+                      const when = transaction.transaction_date || transaction.date || transaction.created_at
+                      const amount = transaction.amount
+                      const currency = transaction.currency || "TZS"
+                      const status = transaction.status || transaction.state || "pending"
+
+                      return (
+                        <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                              {getTransactionIcon(derivedType)}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{title}</h3>
+                              <p className="text-sm text-muted-foreground">{descFromTx}</p>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <Calendar className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">
+                                  {when ? new Date(when).toLocaleDateString() : ""}
+                                </span>
+                              </div>
                             </div>
                           </div>
+                          <div className="text-right">
+                            {amount ? (
+                              <p className="font-semibold">
+                                {currency} {Number(amount).toLocaleString()}
+                              </p>
+                            ) : null}
+                            <Badge className={getStatusColor(status)}>{status}</Badge>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          {transaction.amount && (
-                            <p className="font-semibold">
-                              {(transaction.currency || "TZS")} {Number(transaction.amount).toLocaleString()}
-                            </p>
-                          )}
-                          <Badge className={getStatusColor(transaction.status)}>{transaction.status}</Badge>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </CardContent>

@@ -1,4 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+import { AuthManager } from "@/lib/auth"
 
 export interface FishCatchRequest {
   fish_type: string
@@ -116,6 +117,42 @@ export interface UserTransactionsResponse {
   transactions: any[]
 }
 
+// Transactions (request/send)
+export type TransactionAction = "request" | "send"
+export type TransactionStatus = "pending" | "sent" | "failed" | "acknowledged"
+
+export interface Transaction {
+  id: string
+  match_id?: string | null
+  catch_id?: string | null
+  from_user_id: string
+  to_user_id?: string | null
+  to_name: string
+  to_phone: string
+  amount: number
+  currency: string
+  action: TransactionAction
+  status: TransactionStatus
+  provider?: string | null
+  note?: string | null
+  created_at: string
+}
+
+export interface TransactionCreateRequest {
+  match_id?: string
+  catch_id?: string
+  to_name: string
+  to_phone: string
+  amount: number
+  currency?: string
+  note?: string
+}
+
+export interface TransactionCreateResponse {
+  status: "success"
+  transaction: Transaction
+}
+
 export interface UserMarketInsightsResponse {
   top_fish_types: [string, number][]
   insight: string
@@ -130,9 +167,11 @@ class APIService {
 
   private async fetchAPI(endpoint: string, options: RequestInit = {}) {
     const url = `${this.baseURL}${endpoint}`
+    const token = AuthManager.getToken()
     const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
       ...options,
@@ -255,6 +294,25 @@ class APIService {
 
   async getUserMarketInsights(userId: string): Promise<UserMarketInsightsResponse> {
     return this.fetchAPI(`/api/users/${userId}/market-insights`, { method: "GET" })
+  }
+
+  // Transactions API
+  async createPaymentRequest(data: TransactionCreateRequest): Promise<TransactionCreateResponse> {
+    return this.fetchAPI(`/api/transactions/request`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async sendPayment(data: TransactionCreateRequest): Promise<TransactionCreateResponse> {
+    return this.fetchAPI(`/api/transactions/send`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getTransaction(id: string): Promise<{ transaction: Transaction }> {
+    return this.fetchAPI(`/api/transactions/${id}`, { method: "GET" })
   }
 }
 

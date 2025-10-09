@@ -16,6 +16,7 @@ import { PWAInstall } from "@/components/pwa-install"
 import { Fish, Camera, Loader2, Volume2, TrendingUp, DollarSign } from "lucide-react"
 import { AuthManager } from "@/lib/auth"
 import { apiService, type FishCatchRequest, type AnalysisResponse, type UserStatsResponse } from "@/lib/api"
+import { PaymentActionModal } from "@/components/payment-action-modal"
 
 const fishTypes = ["tilapia", "catfish", "sardine", "tuna", "mackerel", "snapper", "grouper", "kingfish"]
 
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   const [imagePreview, setImagePreview] = useState<string>("")
   const [stats, setStats] = useState<UserStatsResponse | null>(null)
   const [statsLoading, setStatsLoading] = useState<boolean>(false)
+  const [paymentOpen, setPaymentOpen] = useState(false)
   const router = useRouter()
 
   // Render helpers to avoid passing objects directly to React nodes
@@ -420,7 +422,7 @@ export default function DashboardPage() {
         )}
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <Card className="cursor-pointer hover:bg-card/80 transition-colors" onClick={() => router.push("/credit")}>
             <CardContent className="pt-6 text-center">
               <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -440,8 +442,20 @@ export default function DashboardPage() {
               <p className="text-xs text-muted-foreground">Protect your catch</p>
             </CardContent>
           </Card>
+
+          <Card className="cursor-pointer hover:bg-card/80 transition-colors" onClick={() => setPaymentOpen(true)}>
+            <CardContent className="pt-6 text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <DollarSign className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="font-semibold mb-1">Request/Send Payment</h3>
+              <p className="text-xs text-muted-foreground">Create a payment request or send a payment</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      <PaymentActionModal open={paymentOpen} onOpenChange={setPaymentOpen} />
 
       <BottomNav />
     </div>
